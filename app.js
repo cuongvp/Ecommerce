@@ -9,7 +9,9 @@ app.use(morgan())
 app.use(helmet())
 app.use(compression())
 // init db
-
+require('./src/dbs/init.mongodb')
+// const { checkOnverload } = require('./src/helpers/check.connect')
+// checkOnverload()
 // init routes
 app.get('/', (req, res, next) => {
     res.send({
