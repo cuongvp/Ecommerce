@@ -63,20 +63,15 @@ class AccessService {
                         message: 'publicKey error'
                     }
                 }
-                
-                const publicKeyObject = crypto.createPublicKey(publicKeyString)
+
                 // create token pair
                 const tokens = await createTokenPair(
                     { 
                         userId: newShop._id, 
                         email 
-                    }, 
-                    { 
-                        publicKey: publicKey
-                    }, 
-                    { 
-                        privateKey: privateKey
                     }
+                    , publicKey
+                    , privateKey
                 )
 
                 console.log(`Created Token Success:: ${tokens}`)
