@@ -5,6 +5,8 @@ const router = express.Router()
 
 router.post('/shop/signup', accessController.signUp)
 
+router.post('/shop/login', accessController.login)
+
 router.all('*', (req, res, next) => {
     
     const err = new Error(`Can not find ${req.originalUrl} on the server!`)
