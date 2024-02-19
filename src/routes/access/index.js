@@ -1,11 +1,17 @@
 const express = require('express')
 const accessController = require('../../controllers/access.controller')
 const errorHandler = require('../../core/errorHandler')
+const { authentication } = require('../../auth/authUtils')
 const router = express.Router()
 
 router.post('/shop/signup', accessController.signUp)
 
 router.post('/shop/login', accessController.login)
+
+// authentication //
+router.use(authentication)
+//
+router.post('/shop/logout', accessController.logout)
 
 router.all('*', (req, res, next) => {
     
