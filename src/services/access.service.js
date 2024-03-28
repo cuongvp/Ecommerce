@@ -4,8 +4,9 @@ const crypto = require("crypto");
 const KeyTokenService = require("./keyToken.service");
 const { createTokenPair } = require("../auth/authUtils");
 const { getInfoData } = require("../utils");
-const { BadRequestError, AuthFailureError } = require("../core/error.response");
+const { BadRequestError, AuthFailureError, ForbiddenError } = require("../core/error.response");
 const { findByEmail } = require("./shop.service");
+const { verifyJWT } = require('../auth/authUtils')
 
 const roleShop = {
 	SHOP: "SHOP",
@@ -15,6 +16,55 @@ const roleShop = {
 };
 
 class AccessService {
+
+	static handleRefreshToken = async (refreshToken) => {
+
+		// check used token
+		const foundToken = await KeyTokenService.findByRefreshTokenUsed(refreshToken)
+		// YES
+		if(foundToken){
+			const {userId, email} = await verifyJWT(refreshToken, foundToken.privateKey)
+			console.log({userId, email})
+
+			await KeyTokenService.deleteKeyById(userId)
+
+			throw new ForbiddenError('Something go wrong! Please Login Again')
+		}
+
+		// NO
+		const holderToken = await KeyTokenService.findByRefreshToken({refreshToken})
+		if(!holderToken){
+			throw new AuthFailureError('Shop is not registed!')
+		}
+
+		const  {userId, email}  = await verifyJWT(refreshToken, holderToken.refreshToken)
+
+		const foundShop = await findByEmail(email)
+
+		if(!foundShop) throw new AuthFailureError('Shop is not registed!')
+
+		// create Token
+
+		const tokens = await createTokenPair({userId, email}, holderToken.publicKey, holderToken.privateKey)
+
+		// update tokens
+		await holderToken.updatedAt({
+			$set: {
+				refreshToken: tokens.refreshToken
+			},
+			$addToSet: {
+				refreshTokensUsed: refreshToken
+			}
+		})
+
+		return {
+			user: {
+				userId, email
+			},
+			tokens
+		}
+
+	}
 
 	/*
 		1) check email
@@ -114,18 +164,6 @@ class AccessService {
 					format: "pem",
 				},
 			});
-
-			// const publicKeyString = await KeyTokenService.createKeyToken({
-			// 	userId: newShop._id,
-			// 	publicKey: publicKey,
-			// });
-
-			// if (!publicKeyString) {
-			// 	return {
-			// 		code: "publicKeyString xxx",
-			// 		message: "publicKey error",
-			// 	};
-			// }
 
 			// create token pair
 			const tokens = await createTokenPair(

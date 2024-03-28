@@ -60,7 +60,6 @@ const authentication = asyncHandler(async (req, res, next) => {
     if(!userId){
         throw new AuthFailureError('Invalid Request')
     }
-
     // 2
     const keyStore = await findByUserId(userId)
 
@@ -93,7 +92,12 @@ const authentication = asyncHandler(async (req, res, next) => {
 
 })
 
+const verifyJWT = async (token, keySecret) => {
+    return await jwt.verify(token, keySecret)
+}
+
 module.exports = {
     createTokenPair,
-    authentication
+    authentication,
+    verifyJWT
 }

@@ -12,6 +12,7 @@ router.post('/shop/login', accessController.login)
 router.use(authentication)
 //
 router.post('/shop/logout', accessController.logout)
+router.post('/shop/handleRefreshToken', accessController.handleRefreshToken)
 
 router.all('*', (req, res, next) => {
     
