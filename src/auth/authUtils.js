@@ -86,6 +86,7 @@ const authentication = asyncHandler(async (req, res, next) => {
         return next()
 
     }catch(err){
+        console.log('Error here!')
         throw err
     }
 
