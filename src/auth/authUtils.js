@@ -8,7 +8,8 @@ const { AuthFailureError, NotFoundError } = require('../core/error.response')
 const HEADER = {
     API_KEY: 'x-api-key',
     CLIENT_ID: 'x-client-id',
-    AUTHORIZATION: 'authorization'
+    AUTHORIZATION: 'authorization',
+    REFRESHTOKEN: 'refreshtoken'
 }
 
 
@@ -44,7 +45,7 @@ const createTokenPair = async (payload, publicKey, privateKey) => {
     }
 }
 
-const authentication = asyncHandler(async (req, res, next) => {
+const authentication = asyncHandler (async (req, res, next) => {
     /*
     1) check userId missing
     2) get access token
@@ -68,29 +69,26 @@ const authentication = asyncHandler(async (req, res, next) => {
     }
 
     // 3
-    const accessToken = req.headers[HEADER.AUTHORIZATION]
-    if(!accessToken){
-        throw new AuthFailureError('Invalid Request')
-    }
-
-
-    try{
-        const decoder = jwt.verify(accessToken, keyStore.publicKey)
-
-        if(userId != decoder.userId){
-            throw new AuthFailureError('Invalid User')
+    if(req.headers[HEADER.REFRESHTOKEN]){
+        try{
+            const refreshToken = req.headers[HEADER.REFRESHTOKEN]
+            const decoder = jwt.verify(refreshToken, keyStore.publicKey)
+    
+            if(userId != decoder.userId){
+                throw new AuthFailureError('Invalid User')
+            }
+    
+            req.keyStore = keyStore
+            req.user = decoder
+            req.refreshToken = refreshToken
+    
+            return next()
+    
+        }catch(err){
+            console.log('Error here!')
+            throw err
         }
-
-        req.keyStore = keyStore
-
-        return next()
-
-    }catch(err){
-        console.log('Error here!')
-        throw err
     }
-
-
 })
 
 const verifyJWT = async (token, keySecret) => {

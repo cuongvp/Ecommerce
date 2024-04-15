@@ -7,6 +7,7 @@ const { getInfoData } = require("../utils");
 const { BadRequestError, AuthFailureError, ForbiddenError } = require("../core/error.response");
 const { findByEmail } = require("./shop.service");
 const { verifyJWT } = require('../auth/authUtils')
+const keytokenModel = require("../models/keytoken.model")
 
 const roleShop = {
 	SHOP: "SHOP",
@@ -17,45 +18,45 @@ const roleShop = {
 
 class AccessService {
 
-	static handleRefreshToken = async (refreshToken) => {
+	static handleRefreshToken = async ({refreshToken, user, keyStore}) => {
 
-		// check used token
-		const foundToken = await KeyTokenService.findByRefreshTokenUsed(refreshToken)
-		// YES
-		if(foundToken){
-			const {userId, email} = await verifyJWT(refreshToken, foundToken.privateKey)
-			console.log({userId, email})
+		const {userId, email} = user;
 
+		if(keyStore.refreshTokensUsed.includes(refreshToken)){
 			await KeyTokenService.deleteKeyById(userId)
-
-			throw new ForbiddenError('Something go wrong! Please Login Again')
+			throw new ForbiddenError('Something wrong happend !! Pls Login')
 		}
 
-		// NO
-		const holderToken = await KeyTokenService.findByRefreshToken({refreshToken})
-		if(!holderToken){
-			throw new AuthFailureError('Shop is not registed!')
+		if(keyStore.refreshToken !== refreshToken){
+			throw new AuthFailureError('Shop is not registered')
 		}
+		
+		const foundShop = await findByEmail({email})
 
-		const  {userId, email}  = await verifyJWT(refreshToken, holderToken.refreshToken)
-
-		const foundShop = await findByEmail(email)
-
-		if(!foundShop) throw new AuthFailureError('Shop is not registed!')
+		if(!foundShop) throw new AuthFailureError('Shop is not registed 2!')
 
 		// create Token
 
 		const tokens = await createTokenPair({userId, email}, holderToken.publicKey, holderToken.privateKey)
 
 		// update tokens
-		await holderToken.updatedAt({
-			$set: {
-				refreshToken: tokens.refreshToken
-			},
-			$addToSet: {
-				refreshTokensUsed: refreshToken
-			}
-		})
+		// await holderToken.update({
+		// 	$set: {
+		// 		refreshToken: tokens.refreshToken
+		// 	},
+		// 	$addToSet: {
+		// 		refreshTokensUsed: refreshToken
+		// 	}
+		// })
+
+		console.log(holderToken._id)
+
+		const rs = await keytokenModel.findByIdAndUpdate(
+			{ _id: holderToken._id },
+			{ $addToSet: {refreshTokensUsed: holderToken.refreshToken}}
+		)
+
+		console.log(rs)
 
 		return {
 			user: {
@@ -63,7 +64,7 @@ class AccessService {
 			},
 			tokens
 		}
-
+		
 	}
 
 	/*
